@@ -1,8 +1,12 @@
 numpy
+scipy
 opencv-python
 protobuf
 easydict
-pytorch
+torch
+cudatoolkit = 11.3
+torchvision
+torchaudio
 pillow
 matplotlib
 wxpython
