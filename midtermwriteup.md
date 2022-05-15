@@ -1,13 +1,13 @@
 # Writeup: 3D Object Detection
 
-## Vary degrees of visibility of vehicle
-Trying to identify vehicles in a point-cloud can be trivial. Some vehicles are clear enough to determine not only that a
+## Varying Degrees of Vehicle Visibility
+Sometimes, trying to identify vehicles in a point-cloud can be trivial. Some vehicles are clear enough to determine not only that a
 vehicle is in that location, but also things like what type of vehicle it is.
 
 Other vehicles can be found without too much trouble, but have some features obscured, which might be detrimental
 to a neural network's ability to identify them.
 
-Finally, some vehicles are difficult to find - due to obstructions, distance, or even awkward angle - even for a human.
+Finally, some vehicles are difficult to find - due to obstructions, distance, or an awkward angle - even for a human.
 
 ### Easily Identifiable Vehicles
 ![](/img/clearlyVisible1.png)
