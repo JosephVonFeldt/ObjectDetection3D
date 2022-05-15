@@ -4,7 +4,6 @@ opencv-python
 protobuf
 easydict
 torch
-cudatoolkit = 11.3
 torchvision
 torchaudio
 pillow

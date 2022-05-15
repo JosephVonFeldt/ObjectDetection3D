@@ -56,6 +56,7 @@ def load_configs_model(model_name='darknet', configs=None):
         configs.num_workers = 4
         configs.pin_memory = True
         configs.use_giou_loss = False
+        configs.min_iou = .5
 
     elif model_name == 'fpn_resnet':
         ####### ID_S3_EX1-3 START #######     
@@ -65,11 +66,10 @@ def load_configs_model(model_name='darknet', configs=None):
         configs.pretrained_filename = os.path.join(configs.model_path, 'pretrained', 'fpn_resnet_18_epoch_300.pth')
         configs.arch = 'fpn_resnet'
         configs.batch_size = 4
-        configs.cfgfile = os.path.join(configs.model_path, 'config', 'complex_yolov4.cfg')
         configs.conf_thresh = 0.5
         configs.distributed = False
         configs.img_size = 608
-        configs.nms_thresh = 0.4
+        configs.nms_thresh = 0.5
         configs.num_samples = None
         configs.num_workers = 4
         configs.pin_memory = True
@@ -79,6 +79,7 @@ def load_configs_model(model_name='darknet', configs=None):
         configs.down_ratio = 4
         configs.max_objects = 50
         configs.K = 50
+        configs.min_iou = .5
 
         configs.imagenet_pretrained = False
         configs.head_conv = 64
@@ -101,9 +102,9 @@ def load_configs_model(model_name='darknet', configs=None):
         raise ValueError("Error: Invalid model name")
 
     # GPU vs. CPU
-    configs.no_cuda = True # if true, cuda is not used
+    configs.no_cuda = False # if true, cuda is not used
     configs.gpu_idx = 0  # GPU index to use.
-    configs.device = torch.device('cpu' if configs.no_cuda else 'cuda:{}'.format(configs.gpu_idx))
+    configs.device = torch.device('cpu' if configs.no_cuda else 'cuda')
 
     return configs
 
@@ -162,7 +163,7 @@ def create_model(configs):
     print('Loaded weights from {}\n'.format(configs.pretrained_filename))
 
     # set model to evaluation state
-    configs.device = torch.device('cpu' if configs.no_cuda else 'cuda:{}'.format(configs.gpu_idx))
+    print(configs.device)
     model = model.to(device=configs.device)  # load model to either cpu or gpu
     model.eval()          
 
@@ -191,7 +192,7 @@ def detect_objects(input_bev_maps, model, configs):
                 for obj in detection:
                     x, y, w, l, im, re, _, _, _ = obj
                     yaw = np.arctan2(im, re)
-                    detections.append([1, x, y, 0.0, 1.50, w, l, yaw])    
+                    detections.append([1, x, y, 0.0, 1.50, w, l, yaw])
 
         elif 'fpn_resnet' in configs.arch:
             # decode output and perform post-processing
@@ -228,11 +229,11 @@ def detect_objects(input_bev_maps, model, configs):
             x = bev_x / configs.bev_height * (configs.lim_x[1] - configs.lim_x[0])
             y = bev_y / configs.bev_width * (configs.lim_y[1] - configs.lim_y[0]) - (configs.lim_y[1] - configs.lim_y[0])/2
             w = bev_w / configs.bev_width * (configs.lim_y[1] - configs.lim_y[0])
-            l = bev_l / configs.bev_width * (configs.lim_x[1] - configs.lim_x[0])
+            l = bev_l / configs.bev_height * (configs.lim_x[1] - configs.lim_x[0])
 
             ## step 4 : append the current object to the 'objects' array
-            if ((x >= configs.lim_x[0]) and (x <= configs.lim_x[1]) and (y >= configs.lim_y[0]) and (y <= configs.lim_y[1]) and (z >= configs.lim_z[0]) and (z <= configs.lim_z[1])):
-                objects.append([1, x, y, 0.0, 1.50, w, l, -yaw])
+            #if ((x >= configs.lim_x[0]) and (x <= configs.lim_x[1]) and (y >= configs.lim_y[0]) and (y <= configs.lim_y[1]) and (z >= configs.lim_z[0]) and (z <= configs.lim_z[1])):
+            objects.append([1, x, y, z, h, w, l, yaw])
     #######
     ####### ID_S3_EX2 END #######
     

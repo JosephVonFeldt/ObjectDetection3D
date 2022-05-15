@@ -72,7 +72,6 @@ def show_range_image(frame, lidar_name):
     range_image = dataset_pb2.MatrixFloat()
     range_image.ParseFromString(zlib.decompress(lidar.ri_return1.range_image_compressed))
     range_image = np.array(range_image.data).reshape(range_image.shape.dims)
-    print(range_image)
     # step 2 : extract the range and the intensity channel from the range image
     range = range_image[:,:,0]
     intensity = range_image[:, :, 1]
@@ -84,11 +83,15 @@ def show_range_image(frame, lidar_name):
     range = range * 255 / (np.amax(range) - np.amin(range))
     range = range.astype(np.uint8)
     # step 5 : map the intensity channel onto an 8-bit scale and normalize with the difference between the 1- and 99-percentile to mitigate the influence of outliers
-    intensity = np.amax(intensity) / 2 * intensity * 255 / (np.amax(intensity) - np.amin(intensity))
+    intensity = intensity * 255 / (np.percentile(intensity, 99) - np.percentile(intensity, 1))
+    intensity[intensity > 255] = 255
     intensity = intensity.astype(np.uint8)
     # step 6 : stack the range and intensity image vertically using np.vstack and convert the result to an unsigned 8-bit integer
     
     img_range_intensity = np.vstack((range,intensity))
+    deg45 = int(range_image.shape[1] / 4)
+    center = int(range_image.shape[1] / 2)
+    img_range_intensity[:,center-deg45:center+deg45]
     #######
     ####### ID_S1_EX1 END #######     
     
@@ -121,7 +124,7 @@ def bev_from_pcl(lidar_pcl, configs):
     bev_dis = (configs.lim_y[1] - configs.lim_y[0]) / configs.bev_width
     lidar_pcl_cpy[:, 1] = np.int_(lidar_pcl_cpy[:, 1] / bev_dis + (configs.bev_width+1)/2)
     # step 4 : visualize point-cloud using the function show_pcl from a previous task
-    show_pcl(lidar_pcl_cpy)
+    #show_pcl(lidar_pcl_cpy)
     #######
     ####### ID_S2_EX1 END #######
 
@@ -145,11 +148,12 @@ def bev_from_pcl(lidar_pcl, configs):
     ##          also, make sure that the influence of outliers is mitigated by normalizing intensity on the difference between the max. and min. value within the point cloud
 
     lidar_pcl_top[:,3] = lidar_pcl_top[:, 3] /np.amax(lidar_pcl_top[:, 3])
+    perc99 = np.percentile(lidar_pcl_top[:,3], 99)
     for x, y, z, i in lidar_pcl_top:
-        intensity_map[int(x),int(y)] = i
+        intensity_map[int(x),int(y)] = i/perc99 if i <= perc99 else 1
     #intensity_map[np.int_(lidar_pcl_top[:, 0]), np.int_(lidar_pcl_top[:, 1])] = lidar_pcl_top[:, 3] / (np.amax(lidar_pcl_top[:, 3]) - np.amin(lidar_pcl_top[:, 3]))
     ## step 5 : temporarily visualize the intensity map using OpenCV to make sure that vehicles separate well from the background
-    img_intensity = intensity_map * 255
+    img_intensity = intensity_map * 256
     img_intensity = img_intensity.astype(np.uint8)
     #cv2.imshow('img_intensity', img_intensity)
     #if cv2.waitKey(1000) & 0xFF == 27:
@@ -166,18 +170,19 @@ def bev_from_pcl(lidar_pcl, configs):
 
     ## step 1 : create a numpy array filled with zeros which has the same dimensions as the BEV map
     height_map = np.zeros([configs.bev_height + 1, configs.bev_width + 1])
+    max_height = max(lidar_pcl_top[:,2])
     ## step 2 : assign the height value of each unique entry in lidar_top_pcl to the height map
     ##          make sure that each entry is normalized on the difference between the upper and lower height defined in the config file
     ##          use the lidar_pcl_top data structure from the previous task to access the pixels of the height_map
     for x, y, z, _ in lidar_pcl_top:
         height_map[int(x), int(y)] = z / (configs.lim_z[1]-configs.lim_z[0])
     ## step 3 : temporarily visualize the intensity map using OpenCV to make sure that vehicles separate well from the background
-    #height_map[np.int_(lidar_pcl_top[:, 0]), np.int_(lidar_pcl_top[:, 1])] = lidar_pcl_top[:, 2] / float(np.abs(configs.lim_z[1] - configs.lim_z[0]))
-    img_height = height_map * 255
+
+    img_height = height_map * 256
     img_height = img_height.astype(np.uint8)
-    cv2.imshow('img_intensity', img_height)
-    if cv2.waitKey(1000) & 0xFF == 27:
-        cv2.destroyAllWindows()
+    #cv2.imshow('img_intensity', img_height)
+    #if cv2.waitKey(1000) & 0xFF == 27:
+        #cv2.destroyAllWindows()
     #######
     ####### ID_S2_EX3 END #######
 
